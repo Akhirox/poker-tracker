@@ -3,11 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Betclic Poker Tracker</title>
+    <title>Chbk Poker Tracker</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         body { background-color: #121214; color: #e1e1e6; }
         .card { background-color: #202024; border: 1px solid #323238; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #121214; }
+        ::-webkit-scrollbar-thumb { background: #323238; border-radius: 4px; }
     </style>
 </head>
 <body class="font-sans min-h-screen p-4 md:p-8">
@@ -20,20 +25,14 @@
             </div>
             
             <button id="btn-google-login" class="w-full bg-white hover:bg-gray-100 text-gray-900 font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg">
-                <svg class="w-5 h-5" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.53-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-8.82z"/>
-                    <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.11 0-5.74-2.11-6.68-4.96H1.21v3.15C3.18 21.88 7.31 24 12 24z"/>
-                    <path fill="#FBBC05" d="M5.32 14.24A7.16 7.16 0 0 1 4.91 12c0-.79.13-1.57.38-2.31V6.54H1.21A11.94 11.94 0 0 0 0 12c0 1.92.45 3.74 1.21 5.46l4.11-3.22z"/>
-                    <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.18 2.12 1.21 6.54l4.11 3.22c.94-2.85 3.57-4.96 6.68-4.96z"/>
-                </svg>
+                <i data-lucide="log-in" class="w-5 h-5 text-gray-600"></i>
                 Se connecter avec Google
             </button>
-            
             <p id="auth-error" class="text-red-400 text-sm hidden"></p>
         </div>
     </div>
 
-    <div id="app-container" class="max-w-5xl mx-auto space-y-6 hidden">
+    <div id="app-container" class="max-w-6xl mx-auto space-y-6 hidden">
         
         <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 card p-6 rounded-xl">
             <div>
@@ -45,87 +44,116 @@
                     <button onclick="logout()" class="text-xs text-red-400 hover:underline font-semibold ml-2">Déconnexion</button>
                 </div>
             </div>
-            
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full md:w-auto">
-                <div class="bg-[#121214] p-3 rounded-lg text-center min-w-[100px]">
-                    <div class="text-xs text-gray-400 uppercase">Parties</div>
-                    <div id="stat-total" class="text-xl font-bold">0</div>
-                </div>
-                <div class="bg-[#121214] p-3 rounded-lg text-center min-w-[100px]">
-                    <div class="text-xs text-gray-400 uppercase">Bankroll Net</div>
-                    <div id="stat-bankroll" class="text-xl font-bold text-gray-200">0.00€</div>
-                </div>
-                <div class="bg-[#121214] p-3 rounded-lg text-center min-w-[100px]">
-                    <div class="text-xs text-gray-400 uppercase">ROI</div>
-                    <div id="stat-roi" class="text-xl font-bold text-gray-200">0%</div>
-                </div>
-                <div class="bg-[#121214] p-3 rounded-lg text-center min-w-[100px]">
-                    <div class="text-xs text-gray-400 uppercase">Winrate</div>
-                    <div id="stat-winrate" class="text-xl font-bold text-gray-200">0%</div>
-                </div>
+
+            <div class="flex bg-[#121214] p-1 rounded-lg border border-[#323238] w-full md:w-auto">
+                <button onclick="changeTimeFilter('all')" id="filter-all" class="flex-1 md:flex-none px-4 py-1.5 text-xs font-bold rounded-md transition-all bg-red-600 text-white">All-Time</button>
+                <button onclick="changeTimeFilter('month')" id="filter-month" class="flex-1 md:flex-none px-4 py-1.5 text-xs font-bold rounded-md transition-all text-gray-400 hover:text-white">Mois</button>
+                <button onclick="changeTimeFilter('week')" id="filter-week" class="flex-1 md:flex-none px-4 py-1.5 text-xs font-bold rounded-md transition-all text-gray-400 hover:text-white">Semaine</button>
+                <button onclick="changeTimeFilter('today')" id="filter-today" class="flex-1 md:flex-none px-4 py-1.5 text-xs font-bold rounded-md transition-all text-gray-400 hover:text-white">Aujourd'hui</button>
             </div>
         </header>
 
+        <section class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="card p-4 rounded-xl text-center">
+                <div class="text-xs text-gray-400 uppercase font-medium">Volume</div>
+                <div id="stat-total" class="text-2xl font-bold mt-1">0</div>
+                <div id="sub-total" class="text-[11px] text-gray-500">parties jouées</div>
+            </div>
+            <div class="card p-4 rounded-xl text-center">
+                <div class="text-xs text-gray-400 uppercase font-medium">Bankroll Net</div>
+                <div id="stat-bankroll" class="text-2xl font-bold mt-1 text-gray-200">0.00€</div>
+                <div id="sub-bankroll" class="text-[11px] text-gray-500">profit total</div>
+            </div>
+            <div class="card p-4 rounded-xl text-center">
+                <div class="text-xs text-gray-400 uppercase font-medium">ROI Global</div>
+                <div id="stat-roi" class="text-2xl font-bold mt-1 text-gray-200">0%</div>
+                <div id="sub-roi" class="text-[11px] text-gray-500">sur les mises</div>
+            </div>
+            <div class="card p-4 rounded-xl text-center">
+                <div class="text-xs text-gray-400 uppercase font-medium">Winrate Global</div>
+                <div id="stat-winrate" class="text-2xl font-bold mt-1 text-gray-200">0%</div>
+                <div id="sub-winrate" class="text-[11px] text-gray-500">itm (1ère place)</div>
+            </div>
+        </section>
+
         <main class="grid md:grid-cols-3 gap-6">
             
-            <section class="md:col-span-2 card p-6 rounded-xl flex flex-col justify-center min-h-[300px]">
-                
-                <div id="screen-start" class="space-y-6 text-center">
-                    <h3 class="text-lg font-medium text-gray-300">Lancer une nouvelle partie</h3>
-                    <div class="grid grid-cols-2 gap-4 max-w-md mx-auto">
-                        <button onclick="startGame(0.20)" class="bg-amber-600 hover:bg-amber-500 text-white font-bold py-6 px-4 rounded-xl text-xl transition-all shadow-lg active:scale-95">
-                            0,20 €
-                        </button>
-                        <button onclick="startGame(1.00)" class="bg-red-600 hover:bg-red-500 text-white font-bold py-6 px-4 rounded-xl text-xl transition-all shadow-lg active:scale-95">
-                            1,00 €
-                        </button>
+            <div class="md:col-span-2 card p-6 rounded-xl flex flex-col justify-between min-h-[380px]">
+                <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                    <i data-lucide="trending-up" class="w-4 h-4 text-red-500"></i> Évolution de la Bankroll
+                </h3>
+                <div class="flex-1 relative w-full h-[280px]">
+                    <canvas id="bankrollChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card p-6 rounded-xl flex flex-col justify-center min-h-[380px]">
+                <div id="screen-start" class="space-y-4 text-center w-full">
+                    <h3 class="text-md font-medium text-gray-300 flex items-center justify-center gap-2">
+                        <i data-lucide="play" class="w-4 h-4 text-emerald-500"></i> Lancer un Spin & Rush
+                    </h3>
+                    <div class="flex flex-col gap-2 max-w-xs mx-auto">
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="startGame(0.20)" class="bg-amber-600 hover:bg-amber-500 text-white font-bold py-4 rounded-xl text-md transition-all shadow-lg active:scale-95">0,20 €</button>
+                            <button onclick="startGame(1.00)" class="bg-red-600 hover:bg-red-500 text-white font-bold py-4 rounded-xl text-md transition-all shadow-lg active:scale-95">1,00 €</button>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button onclick="startGame(2.00)" class="bg-stone-800 hover:bg-stone-700 text-gray-300 font-bold py-2.5 rounded-lg text-sm transition-all border border-stone-700 active:scale-95">2,00 €</button>
+                            <button onclick="startGame(5.00)" class="bg-stone-800 hover:bg-stone-700 text-gray-300 font-bold py-2.5 rounded-lg text-sm transition-all border border-stone-700 active:scale-95">5,00 €</button>
+                            <button onclick="startGame(10.00)" class="bg-stone-800 hover:bg-stone-700 text-gray-300 font-bold py-2.5 rounded-lg text-sm transition-all border border-stone-700 active:scale-95">10,00 €</button>
+                        </div>
                     </div>
                 </div>
 
-                <div id="screen-end" class="hidden space-y-6 text-center">
+                <div id="screen-end" class="hidden space-y-4 text-center w-full">
                     <div class="space-y-1">
-                        <h3 class="text-lg font-medium text-gray-300">Partie en cours...</h3>
-                        <p id="current-game-info" class="text-amber-500 font-bold"></p>
+                        <h3 class="text-md font-medium text-gray-300">Partie en cours...</h3>
+                        <p id="current-game-info" class="text-amber-500 font-bold text-sm"></p>
                     </div>
-
-                    <div class="max-w-md mx-auto space-y-4">
-                        <button onclick="endGame(0)" class="w-full bg-stone-700 hover:bg-stone-600 text-red-400 font-bold py-5 rounded-xl text-lg transition-all border border-red-900/30 active:scale-95">
-                            💥 PERDU
-                        </button>
-                        
-                        <div class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Ou sélectionnez le gain :</div>
-                        
-                        <div id="multipliers-container" class="grid grid-cols-2 gap-3">
-                            </div>
+                    <div class="max-w-xs mx-auto space-y-3">
+                        <button onclick="endGame(0)" class="w-full bg-stone-700 hover:bg-stone-600 text-red-400 font-bold py-3.5 rounded-xl transition-all border border-red-900/30 active:scale-95">💥 PERDU</button>
+                        <div class="text-[11px] text-gray-500 uppercase tracking-wider font-semibold">Sélectionner le jackpot gagné :</div>
+                        <div id="multipliers-container" class="grid grid-cols-2 gap-2"></div>
                     </div>
                 </div>
-
-            </section>
-
-            <section class="flex flex-col gap-6">
-                <div class="card p-6 rounded-xl space-y-4 flex-1">
-                    <h3 class="font-bold text-gray-400 uppercase text-xs tracking-wider">Distribution des jackpots gagnés</h3>
-                    <div id="jackpot-distribution" class="space-y-2 text-sm">
-                        <p class="text-gray-500 italic">Aucune victoire enregistrée</p>
-                    </div>
-                </div>
-
-                <div class="card p-6 rounded-xl space-y-4">
-                    <h3 class="font-bold text-gray-400 uppercase text-xs tracking-wider">Ajuster la Bankroll (Dépôt/Retrait)</h3>
-                    <div class="flex gap-2">
-                        <input type="number" id="bk-amount" step="0.01" placeholder="Ex: 15.00" class="w-full bg-[#121214] border border-[#323238] rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-red-500">
-                        <button onclick="adjustBankroll()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-lg text-sm transition-all active:scale-95">
-                            Valider
-                        </button>
-                    </div>
-                    <p class="text-[11px] text-gray-500">Saisis un montant positif pour un dépôt (ex: 15) ou négatif pour un retrait (ex: -10).</p>
-                </div>
-            </section>
-
+            </div>
         </main>
 
+        <section class="grid md:grid-cols-3 gap-6">
+            <div class="card p-6 rounded-xl space-y-4">
+                <h3 class="font-bold text-gray-400 uppercase text-xs tracking-wider flex items-center gap-2">
+                    <i data-lucide="pie-chart" class="w-4 h-4 text-blue-400"></i> Rentabilité par limites
+                </h3>
+                <div class="space-y-2 text-sm max-h-[160px] overflow-y-auto pr-1" id="format-stats-container">
+                    <p class="text-gray-500 italic">Aucune donnée</p>
+                </div>
+            </div>
+
+            <div class="card p-6 rounded-xl space-y-4">
+                <h3 class="font-bold text-gray-400 uppercase text-xs tracking-wider flex items-center gap-2">
+                    <i data-lucide="award" class="w-4 h-4 text-amber-400"></i> Multiplicateurs Gagnés (Vainqueur)
+                </h3>
+                <div id="jackpot-distribution" class="space-y-1.5 text-sm max-h-[160px] overflow-y-auto pr-1">
+                    <p class="text-gray-500 italic">Aucune victoire</p>
+                </div>
+            </div>
+
+            <div class="card p-6 rounded-xl space-y-4 flex flex-col justify-center">
+                <h3 class="font-bold text-gray-400 uppercase text-xs tracking-wider flex items-center gap-2">
+                    <i data-lucide="wallet" class="w-4 h-4 text-emerald-400"></i> Mouvements de caisse
+                </h3>
+                <div class="flex gap-2">
+                    <input type="number" id="bk-amount" step="0.01" placeholder="Ex: 15.00" class="w-full bg-[#121214] border border-[#323238] rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-red-500">
+                    <button onclick="adjustBankroll()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-lg text-sm transition-all active:scale-95">Valider</button>
+                </div>
+                <p class="text-[11px] text-gray-500">Montant positif = Dépôt (ex: 20). Montant négatif = Retrait (ex: -50).</p>
+            </div>
+        </section>
+
         <section class="card p-6 rounded-xl space-y-4">
-            <h3 class="text-lg font-bold text-gray-200">10 Dernières Activités</h3>
+            <h3 class="text-lg font-bold text-gray-200 flex items-center gap-2">
+                <i data-lucide="history" class="w-5 h-5 text-gray-400"></i> Historique Complet de l'Activité
+            </h3>
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm text-gray-300">
                     <thead class="text-xs uppercase bg-[#121214] text-gray-400">
@@ -135,33 +163,33 @@
                             <th class="p-3">Durée</th>
                             <th class="p-3">Résultat</th>
                             <th class="p-3">Net</th>
+                            <th class="p-3 text-right">Action</th>
                         </tr>
                     </thead>
                     <tbody id="history-table-body" class="divide-y divide-[#323238]">
                         <tr>
-                            <td colspan="5" class="p-4 text-center text-gray-500 italic">Aucune activité enregistrée</td>
+                            <td colspan="6" class="p-4 text-center text-gray-500 italic">Aucune donnée chargée</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </section>
-
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getFirestore, collection, addDoc, updateDoc, doc, query, where, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, query, where, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
         const firebaseConfig = {
-  apiKey: "AIzaSyDjH2qP9f76Lb-VSW4J6dS_hKEec3i0c68",
-  authDomain: "poker-tracker-3e84d.firebaseapp.com",
-  databaseURL: "https://poker-tracker-3e84d-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "poker-tracker-3e84d",
-  storageBucket: "poker-tracker-3e84d.firebasestorage.app",
-  messagingSenderId: "220051784036",
-  appId: "1:220051784036:web:9daa7ee37207b914a8fa71"
-};
+            apiKey: "AizaSyDjH2qPf76Lb-VSW4J6dS_hKEec3i0c68",
+            authDomain: "poker-tracker-3e84d.firebaseapp.com",
+            databaseURL: "https://poker-tracker-3e84d-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "poker-tracker-3e84d",
+            storageBucket: "poker-tracker-3e84d.firebasedatabase.app",
+            messagingSenderId: "220051784036",
+            appId: "1:220051784036:web:9daa7ee37207b914a8fa71"
+        };
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
@@ -169,30 +197,24 @@
         const provider = new GoogleAuthProvider();
         const partiesCollection = collection(db, "parties");
 
-        let currentUser = null;
-        let currentGameId = null;
-        let currentGameBuyIn = 0;
-        let unsubscribeSnapshot = null;
+        let currentUser = null, currentGameId = null, currentGameBuyIn = 0, unsubscribeSnapshot = null;
+        let chartInstance = null, currentTimeFilter = 'all', allDataCache = [];
 
-        const multipliers = {
-            0.20: [0.40, 0.60, 0.80, 1.00],
-            1.00: [2.00, 3.00, 4.00, 5.00]
+        // STRUCTURE DES MULTIPLICATEURS MIS À JOUR SELON TES PROBAS BETCLIC
+        const multipliers = { 
+            0.20: [0.40, 0.60, 1.00, 2.00, 10.00, 200.00],
+            1.00: [2.00, 3.00, 5.00, 10.00, 50.00, 1000.00],
+            2.00: [4.00, 6.00, 10.00, 20.00, 100.00, 2000.00],
+            5.00: [10.00, 15.00, 25.00, 50.00, 250.00, 5000.00],
+            10.00: [20.00, 30.00, 50.00, 100.00, 500.00, 10000.00]
         };
 
-        // GESTION AUTHENTIFICATION GOOGLE
+        // AUTH
         const authContainer = document.getElementById('auth-container');
         const appContainer = document.getElementById('app-container');
-        const btnGoogleLogin = document.getElementById('btn-google-login');
-        const authError = document.getElementById('auth-error');
 
-        btnGoogleLogin.addEventListener('click', () => {
-            authError.classList.add('hidden');
-            signInWithPopup(auth, provider)
-                .catch(error => {
-                    console.error(error);
-                    authError.innerText = "Erreur de connexion avec Google.";
-                    authError.classList.remove('hidden');
-                });
+        document.getElementById('btn-google-login').addEventListener('click', () => {
+            signInWithPopup(auth, provider).catch(err => console.error(err));
         });
 
         window.logout = function() {
@@ -212,206 +234,289 @@
                 appContainer.classList.add('hidden');
                 authContainer.classList.remove('hidden');
             }
+            lucide.createIcons();
         });
 
-        // ACTIONS JEUX
+        // ACTION JEUX
         const screenStart = document.getElementById('screen-start');
         const screenEnd = document.getElementById('screen-end');
-        const currentGameInfo = document.getElementById('current-game-info');
         const multipliersContainer = document.getElementById('multipliers-container');
 
         window.startGame = async function(buyIn) {
             if (!currentUser) return;
             currentGameBuyIn = buyIn;
-
+            setupEndScreen(buyIn);
             try {
-                setupEndScreen(buyIn);
                 const docRef = await addDoc(partiesCollection, {
-                    userId: currentUser.uid,
-                    buyIn: buyIn,
-                    dateDebut: serverTimestamp(),
-                    statut: "En cours",
-                    gain: 0,
-                    net: -buyIn
+                    userId: currentUser.uid, buyIn: buyIn, dateDebut: serverTimestamp(), statut: "En cours", gain: 0, net: -buyIn
                 });
                 currentGameId = docRef.id;
-            } catch (e) {
-                console.error(e);
-                resetUI();
-            }
+            } catch (e) { console.error(e); resetUI(); }
         };
 
         window.endGame = async function(gain) {
             if (!currentGameId) return;
             const net = gain - currentGameBuyIn;
             const docRef = doc(db, "parties", currentGameId);
-
+            resetUI();
             try {
-                resetUI();
-                await updateDoc(docRef, {
-                    gain: gain,
-                    net: net,
-                    dateFin: serverTimestamp(),
-                    statut: "Terminé"
-                });
-            } catch (e) {
-                console.error(e);
-            }
+                await updateDoc(docRef, { gain: gain, net: net, dateFin: serverTimestamp(), statut: "Terminé" });
+            } catch (e) { console.error(e); }
         };
 
-        // ENREGISTRER UN DEPOT / RETRAIT LIBRE
         window.adjustBankroll = async function() {
             if (!currentUser) return;
             const input = document.getElementById('bk-amount');
             const amount = parseFloat(input.value);
-
-            if (isNaN(amount) || amount === 0) {
-                alert("Veuillez saisir un montant valide (différent de 0).");
-                return;
-            }
-
+            if (isNaN(amount) || amount === 0) return alert("Montant incorrect");
             try {
+                const now = new Date();
                 await addDoc(partiesCollection, {
-                    userId: currentUser.uid,
-                    buyIn: 0,
-                    gain: amount,
-                    net: amount,
-                    dateDebut: serverTimestamp(),
-                    dateFin: serverTimestamp(),
-                    statut: "Transaction"
+                    userId: currentUser.uid, buyIn: 0, gain: amount, net: amount, dateDebut: now, dateFin: now, statut: "Transaction"
                 });
-                input.value = ''; // Reset du champ libre
-            } catch (e) {
-                console.error("Erreur transaction: ", e);
-            }
+                input.value = '';
+            } catch (e) { console.error(e); }
+        };
+
+        window.deleteEntry = async function(id) {
+            if (confirm("Supprimer cette entrée ?")) await deleteDoc(doc(db, "parties", id));
         };
 
         function setupEndScreen(buyIn) {
             screenStart.classList.add('hidden');
             screenEnd.classList.remove('hidden');
-            currentGameInfo.innerText = `Format : Spin & Rush ${buyIn.toFixed(2)}€`;
-            
+            document.getElementById('current-game-info').innerText = `Format : Spin & Rush ${buyIn.toFixed(2)}€`;
             multipliersContainer.innerHTML = '';
-            multipliers[buyIn].forEach(amount => {
+            
+            // On affiche seulement les 4 plus petits multiplicateurs courants pour garder des gros boutons propres sur mobile
+            // Les jackpots astronomiques (ex: x1000) restent pris en compte s'ils tombent
+            const availableAmounts = multipliers[buyIn].slice(0, 4); 
+            
+            availableAmounts.forEach(amount => {
                 const btn = document.createElement('button');
-                btn.className = "bg-emerald-700 hover:bg-emerald-600 text-white font-bold py-3 px-2 rounded-lg transition-all active:scale-95";
+                btn.className = "bg-emerald-700 hover:bg-emerald-600 text-white font-bold py-2 px-1 rounded-lg text-sm transition-all active:scale-95";
                 btn.innerText = `+ ${amount.toFixed(2)}€`;
                 btn.onclick = () => endGame(amount);
                 multipliersContainer.appendChild(btn);
             });
         }
 
-        function resetUI() {
-            currentGameId = null;
-            screenEnd.classList.add('hidden');
-            screenStart.classList.remove('hidden');
+        function resetUI() { currentGameId = null; screenEnd.classList.add('hidden'); screenStart.classList.remove('hidden'); }
+
+        window.changeTimeFilter = function(filter) {
+            currentTimeFilter = filter;
+            ['all', 'month', 'week', 'today'].forEach(f => {
+                const btn = document.getElementById(`filter-${f}`);
+                if (f === filter) btn.className = "px-4 py-1.5 text-xs font-bold rounded-md transition-all bg-red-600 text-white";
+                else btn.className = "px-4 py-1.5 text-xs font-bold rounded-md transition-all text-gray-400 hover:text-white";
+            });
+            processAndRenderData();
+        };
+
+        function initDataListener(uid) {
+            const q = query(partiesCollection, where("userId", "==", uid), orderBy("dateDebut", "asc"));
+            unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
+                allDataCache = [];
+                snapshot.forEach(doc => { allDataCache.push({ id: doc.id, ...doc.data() }); });
+                processAndRenderData();
+            });
         }
 
-        // CHARGEMENT DATA FILTRÉ PAR USERID
-        function initDataListener(uid) {
-            const q = query(partiesCollection, where("userId", "==", uid), orderBy("dateDebut", "desc"));
-            
-            unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
-                let totalParties = 0, totalMises = 0, totalGains = 0, victoires = 0, netTotal = 0;
-                let jkpDistribution = {};
-                const tableBody = document.getElementById('history-table-body');
-                tableBody.innerHTML = '';
-                let counter = 0;
+        function processAndRenderData() {
+            const now = new Date();
+            let cumulativeBankroll = 0;
+            let chartLabels = [];
+            let chartPoints = [];
 
-                snapshot.forEach((doc) => {
-                    const data = doc.data();
-                    
-                    // Calcul global de la Bankroll (Prend tout : parties terminées ET transactions libres)
-                    if (data.statut === "Terminé" || data.statut === "Transaction") {
-                        netTotal += data.net;
-                    }
+            let totalParties = 0, totalMises = 0, totalGains = 0, victoires = 0, netPeriod = 0;
+            let formatStats = {};
+            // Initialisation dynamique des formats supportés
+            Object.keys(multipliers).forEach(k => { formatStats[k] = { volume: 0, wins: 0, net: 0 }; });
+            let jkpDistribution = {};
 
-                    // Statistiques de Poker pures (Ignore les dépôts/retraits)
+            const tableData = [...allDataCache].reverse();
+            const tableBody = document.getElementById('history-table-body');
+            tableBody.innerHTML = '';
+
+            allDataCache.forEach((data) => {
+                if (data.statut === "Terminé" || data.statut === "Transaction") cumulativeBankroll += data.net;
+                if (!data.dateDebut) return;
+                const d = (typeof data.dateDebut.toDate === 'function') ? data.dateDebut.toDate() : new Date(data.dateDebut);
+
+                let matchFilter = true;
+                const diffMs = now - d;
+
+                if (currentTimeFilter === 'today') matchFilter = d.toDateString() === now.toDateString();
+                else if (currentTimeFilter === 'week') matchFilter = diffMs <= 7 * 24 * 60 * 60 * 1000;
+                else if (currentTimeFilter === 'month') matchFilter = d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+
+                if (matchFilter) {
+                    if (data.statut === "Terminé" || data.statut === "Transaction") netPeriod += data.net;
                     if (data.statut === "Terminé") {
                         totalParties++;
                         totalMises += data.buyIn;
                         totalGains += data.gain;
+                        
+                        if (formatStats[data.buyIn]) {
+                            formatStats[data.buyIn].volume++;
+                            if (data.gain > 0) formatStats[data.buyIn].wins++;
+                            formatStats[data.buyIn].net += data.net;
+                        }
+
                         if (data.gain > 0) {
                             victoires++;
                             jkpDistribution[data.gain] = (jkpDistribution[data.gain] || 0) + 1;
                         }
                     }
+                    chartLabels.push(d.toLocaleDateString([], {day: 'numeric', month: 'short'}) + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
+                    chartPoints.push(cumulativeBankroll);
+                }
+            });
 
-                    // Remplissage du tableau d'historique (max 10 lignes)
-                    if (counter < 10) {
-                        let dateStr = "En attente...";
-                        let dureeStr = "--";
-                        
-                        if (data.dateDebut) {
-                            const d = data.dateDebut.toDate();
-                            dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                            if (data.dateFin && data.statut === "Terminé") {
-                                const diffSec = Math.floor((data.dateFin.toDate() - d) / 1000);
-                                dureeStr = `${Math.floor(diffSec / 60)}m ${diffSec % 60}s`;
-                            }
-                        }
+            tableData.forEach((data) => {
+                if (!data.dateDebut) return;
+                const d = (typeof data.dateDebut.toDate === 'function') ? data.dateDebut.toDate() : new Date(data.dateDebut);
+                
+                let matchFilter = true;
+                if (currentTimeFilter === 'today') matchFilter = d.toDateString() === now.toDateString();
+                else if (currentTimeFilter === 'week') matchFilter = (now - d) <= 7 * 24 * 60 * 60 * 1000;
+                else if (currentTimeFilter === 'month') matchFilter = d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
 
-                        let formatDisplay = `${data.buyIn.toFixed(2)}€`;
-                        let badgeResult = "";
+                if (!matchFilter) return;
 
-                        if (data.statut === "En cours") {
-                            badgeResult = `<span class="px-2 py-1 text-xs rounded bg-amber-500/20 text-amber-400 font-medium">En cours</span>`;
-                        } else if (data.statut === "Transaction") {
-                            formatDisplay = data.net >= 0 ? "💰 Dépôt" : "💸 Retrait";
-                            badgeResult = `<span class="px-2 py-1 text-xs rounded bg-blue-500/20 text-blue-400 font-medium">Ajustement</span>`;
-                            dureeStr = "Fait";
-                        } else {
-                            badgeResult = data.gain > 0 
-                                ? `<span class="px-2 py-1 text-xs rounded bg-emerald-500/20 text-emerald-400 font-medium">Gagné</span>` 
-                                : `<span class="px-2 py-1 text-xs rounded bg-stone-800 text-stone-400">Perdu</span>`;
-                        }
-
-                        const netClass = data.net >= 0 ? "text-emerald-400" : "text-red-400";
-
-                        tableBody.innerHTML += `
-                            <tr>
-                                <td class="p-3 text-gray-400">${dateStr}</td>
-                                <td class="p-3 font-medium">${formatDisplay}</td>
-                                <td class="p-3 text-gray-500">${data.statut === "En cours" ? "⏱️" : dureeStr}</td>
-                                <td class="p-3">${badgeResult}</td>
-                                <td class="p-3 font-bold ${netClass}">${data.net >= 0 ? "+" : ""}${data.net.toFixed(2)}€</td>
-                            </tr>
-                        `;
-                        counter++;
-                    }
-                });
-
-                if (totalParties === 0 && counter === 0) {
-                    tableBody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-500 italic">Prêt pour la première partie !</td></tr>`;
+                let dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                let dureeStr = "--";
+                
+                if (data.dateFin && data.statut === "Terminé") {
+                    const dFin = (typeof data.dateFin.toDate === 'function') ? data.dateFin.toDate() : new Date(data.dateFin);
+                    const diffSec = Math.floor((dFin - d) / 1000);
+                    dureeStr = `${Math.floor(diffSec / 60)}m ${diffSec % 60}s`;
                 }
 
-                // ROI & Winrate calculés uniquement sur les vraies sessions de jeu
-                const roi = totalMises > 0 ? (((totalGains - totalMises) / totalMises) * 100).toFixed(1) : "0.0";
-                const winrate = totalParties > 0 ? ((victoires / totalParties) * 100).toFixed(1) : "0.0";
+                let formatDisplay = `${data.buyIn.toFixed(2)}€`;
+                let badgeResult = "";
 
-                document.getElementById('stat-total').innerText = totalParties;
-                const bankrollEl = document.getElementById('stat-bankroll');
-                bankrollEl.innerText = `${netTotal.toFixed(2)}€`;
-                bankrollEl.className = `text-xl font-bold ${netTotal >= 0 ? 'text-emerald-400' : 'text-red-400'}`;
-                
-                const roiEl = document.getElementById('stat-roi');
-                roiEl.innerText = `${roi}%`;
-                roiEl.className = `text-xl font-bold ${roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`;
-                document.getElementById('stat-winrate').innerText = `${winrate}%`;
-
-                const distContainer = document.getElementById('jackpot-distribution');
-                distContainer.innerHTML = '';
-                if (Object.keys(jkpDistribution).length === 0) {
-                    distContainer.innerHTML = `<p class="text-gray-500 italic">Aucune victoire</p>`;
+                if (data.statut === "En cours") {
+                    badgeResult = `<span class="px-2 py-0.5 text-xs rounded bg-amber-500/20 text-amber-400 font-medium">En cours</span>`;
+                } else if (data.statut === "Transaction") {
+                    formatDisplay = data.net >= 0 ? "💰 Dépôt" : "💸 Retrait";
+                    badgeResult = `<span class="px-2 py-0.5 text-xs rounded bg-blue-500/20 text-blue-400 font-medium">Ajustement</span>`;
+                    dureeStr = "Instant";
                 } else {
-                    Object.keys(jkpDistribution).sort((a,b) => b-a).forEach(val => {
-                        distContainer.innerHTML += `
-                            <div class="flex justify-between border-b border-[#323238] pb-1">
-                                <span class="text-emerald-400">${parseFloat(val).toFixed(2)}€</span>
-                                <span class="font-bold">${jkpDistribution[val]}x</span>
+                    badgeResult = data.gain > 0 
+                        ? `<span class="px-2 py-0.5 text-xs rounded bg-emerald-500/20 text-emerald-400 font-medium">Gagné</span>` 
+                        : `<span class="px-2 py-0.5 text-xs rounded bg-stone-800 text-stone-400">Perdu</span>`;
+                }
+
+                tableBody.innerHTML += `
+                    <tr class="hover:bg-white/5 transition-colors">
+                        <td class="p-3 text-gray-400 text-xs">${dateStr}</td>
+                        <td class="p-3 font-medium">${formatDisplay}</td>
+                        <td class="p-3 text-gray-500 text-xs">${data.statut === "En cours" ? "⏱️" : dureeStr}</td>
+                        <td class="p-3">${badgeResult}</td>
+                        <td class="p-3 font-bold ${data.net >= 0 ? 'text-emerald-400' : 'text-red-400'}">${data.net >= 0 ? "+" : ""}${data.net.toFixed(2)}€</td>
+                        <td class="p-3 text-right">
+                            <button onclick="deleteEntry('${data.id}')" class="text-stone-500 hover:text-red-400 transition-colors p-1">🗑️</button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            if (tableBody.innerHTML === '') {
+                tableBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-500 italic">Aucune activité sur cette période.</td></tr>`;
+            }
+
+            const roi = totalMises > 0 ? (((totalGains - totalMises) / totalMises) * 100).toFixed(1) : "0.0";
+            const winrate = totalParties > 0 ? ((victoires / totalParties) * 100).toFixed(1) : "0.0";
+
+            document.getElementById('stat-total').innerText = totalParties;
+            const bankrollEl = document.getElementById('stat-bankroll');
+            bankrollEl.innerText = `${cumulativeBankroll.toFixed(2)}€`;
+            document.getElementById('sub-bankroll').innerText = `Profit période : ${netPeriod >= 0 ? '+' : ''}${netPeriod.toFixed(2)}€`;
+            
+            const roiEl = document.getElementById('stat-roi');
+            roiEl.innerText = `${roi}%`;
+            roiEl.className = `text-2xl font-bold mt-1 ${roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`;
+            document.getElementById('stat-winrate').innerText = `${winrate}%`;
+
+            // RENTABILITÉ PAR FORMATS (FILTRÉ UNIQUEMENT SUR LES JOUÉS)
+            const formatContainer = document.getElementById('format-stats-container');
+            formatContainer.innerHTML = '';
+            let activeFormats = 0;
+            Object.keys(formatStats).sort((a,b) => a-b).forEach(buyIn => {
+                const fs = formatStats[buyIn];
+                if(fs.volume > 0) {
+                    activeFormats++;
+                    const wrFormat = ((fs.wins / fs.volume) * 100).toFixed(1);
+                    formatContainer.innerHTML += `
+                        <div class="bg-[#121214] p-2.5 rounded-lg flex justify-between items-center border border-[#323238] mb-1.5">
+                            <div>
+                                <div class="font-bold text-gray-200 text-xs">Format ${parseFloat(buyIn).toFixed(2)}€</div>
+                                <div class="text-[11px] text-gray-500">${fs.volume}p • Winrate : <span class="text-gray-300 font-semibold">${wrFormat}%</span></div>
                             </div>
-                        `;
-                    });
+                            <div class="font-bold text-xs ${fs.net >= 0 ? 'text-emerald-400' : 'text-red-400'}">${fs.net >= 0 ? '+' : ''}${fs.net.toFixed(2)}€</div>
+                        </div>
+                    `;
+                }
+            });
+            if(activeFormats === 0) formatContainer.innerHTML = `<p class="text-gray-500 italic text-xs">Aucune donnée</p>`;
+
+            // DISTRIBUTION JACKPOTS
+            const distContainer = document.getElementById('jackpot-distribution');
+            distContainer.innerHTML = '';
+            if (Object.keys(jkpDistribution).length === 0) {
+                distContainer.innerHTML = `<p class="text-gray-500 italic text-xs">Aucune victoire</p>`;
+            } else {
+                Object.keys(jkpDistribution).sort((a,b) => b-a).forEach(val => {
+                    distContainer.innerHTML += `
+                        <div class="flex justify-between border-b border-[#323238] pb-1 text-xs">
+                            <span class="text-emerald-400 font-medium">Multiplicateur à ${parseFloat(val).toFixed(2)}€</span>
+                            <span class="font-bold text-gray-300">${jkpDistribution[val]}x</span>
+                        </div>
+                    `;
+                });
+            }
+
+            renderChart(chartLabels, chartPoints);
+            lucide.createIcons();
+        }
+
+        function renderChart(labels, dataPoints) {
+            const canvas = document.getElementById('bankrollChart');
+            const chartCtx = canvas.getContext('2d');
+            if (chartInstance) chartInstance.destroy();
+
+            const gradient = chartCtx.createLinearGradient(0, 0, 0, 250);
+            gradient.addColorStop(0, 'rgba(239, 68, 68, 0.15)');
+            gradient.addColorStop(1, 'rgba(239, 68, 68, 0)');
+
+            chartInstance = new Chart(chartCtx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Solde Bankroll (€)',
+                        data: dataPoints,
+                        borderColor: '#ef4444',
+                        borderWidth: 2.5,
+                        pointBackgroundColor: '#ef4444',
+                        pointRadius: dataPoints.length > 40 ? 0 : 1.5,
+                        tension: 0.1,
+                        fill: true,
+                        backgroundColor: gradient
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { display: false },
+                        y: {
+                            grid: { color: '#252529' },
+                            ticks: { color: '#888893', font: { size: 10 } }
+                        }
+                    }
                 }
             });
         }
