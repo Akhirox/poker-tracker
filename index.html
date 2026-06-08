@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Betclic Poker Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #121214; color: #e1e1e6; }
+        .card { background-color: #202024; border: 1px solid #323238; }
+    </style>
+</head>
+<body class="font-sans min-h-screen p-4 md:p-8">
+
+    <div id="auth-container" class="min-h-[80vh] flex items-center justify-center">
+        <div class="card p-8 rounded-xl w-full max-w-md space-y-6 shadow-2xl text-center">
+            <div>
+                <h2 class="text-2xl font-bold text-red-500">♠️ Poker Tracker</h2>
+                <p class="text-gray-400 text-sm mt-1">Identifie-toi pour accéder à tes stats</p>
+            </div>
+            
+            <button id="btn-google-login" class="w-full bg-white hover:bg-gray-100 text-gray-900 font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg">
+                <svg class="w-5 h-5" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.53-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-8.82z"/>
+                    <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.11 0-5.74-2.11-6.68-4.96H1.21v3.15C3.18 21.88 7.31 24 12 24z"/>
+                    <path fill="#FBBC05" d="M5.32 14.24A7.16 7.16 0 0 1 4.91 12c0-.79.13-1.57.38-2.31V6.54H1.21A11.94 11.94 0 0 0 0 12c0 1.92.45 3.74 1.21 5.46l4.11-3.22z"/>
+                    <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.18 2.12 1.21 6.54l4.11 3.22c.94-2.85 3.57-4.96 6.68-4.96z"/>
+                </svg>
+                Se connecter avec Google
+            </button>
+            
+            <p id="auth-error" class="text-red-400 text-sm hidden"></p>
+        </div>
+    </div>
+
+    <div id="app-container" class="max-w-5xl mx-auto space-y-6 hidden">
+        
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 card p-6 rounded-xl">
+            <div>
+                <h1 class="text-2xl font-bold text-red-500 flex items-center gap-2">
+                    ♠️ Betclic Spin & Rush Tracker
+                </h1>
+                <div class="flex items-center gap-2 mt-1">
+                    <p id="user-display" class="text-gray-400 text-sm italic"></p>
+                    <button onclick="logout()" class="text-xs text-red-400 hover:underline font-semibold ml-2">Déconnexion</button>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 w-full md:w-auto">
+                <div class="bg-[#121214] p-3 rounded-lg text-center min-w-[100px]">
+                    <div class="text-xs text-gray-400 uppercase">Parties</div>
+                    <div id="stat-total" class="text-xl font-bold">0</div>
+                </div>
+                <div class="bg-[#121214] p-3 rounded-lg text-center min-w-[100px]">
+                    <div class="text-xs text-gray-400 uppercase">Bankroll Net</div>
+                    <div id="stat-bankroll" class="text-xl font-bold text-gray-200">0.00€</div>
+                </div>
+                <div class="bg-[#121214] p-3 rounded-lg text-center min-w-[100px]">
+                    <div class="text-xs text-gray-400 uppercase">ROI</div>
+                    <div id="stat-roi" class="text-xl font-bold text-gray-200">0%</div>
+                </div>
+                <div class="bg-[#121214] p-3 rounded-lg text-center min-w-[100px]">
+                    <div class="text-xs text-gray-400 uppercase">Winrate</div>
+                    <div id="stat-winrate" class="text-xl font-bold text-gray-200">0%</div>
+                </div>
+            </div>
+        </header>
+
+        <main class="grid md:grid-cols-3 gap-6">
+            
+            <section class="md:col-span-2 card p-6 rounded-xl flex flex-col justify-center min-h-[300px]">
+                
+                <div id="screen-start" class="space-y-6 text-center">
+                    <h3 class="text-lg font-medium text-gray-300">Lancer une nouvelle partie</h3>
+                    <div class="grid grid-cols-2 gap-4 max-w-md mx-auto">
+                        <button onclick="startGame(0.20)" class="bg-amber-600 hover:bg-amber-500 text-white font-bold py-6 px-4 rounded-xl text-xl transition-all shadow-lg active:scale-95">
+                            0,20 €
+                        </button>
+                        <button onclick="startGame(1.00)" class="bg-red-600 hover:bg-red-500 text-white font-bold py-6 px-4 rounded-xl text-xl transition-all shadow-lg active:scale-95">
+                            1,00 €
+                        </button>
+                    </div>
+                </div>
+
+                <div id="screen-end" class="hidden space-y-6 text-center">
+                    <div class="space-y-1">
+                        <h3 class="text-lg font-medium text-gray-300">Partie en cours...</h3>
+                        <p id="current-game-info" class="text-amber-500 font-bold"></p>
+                    </div>
+
+                    <div class="max-w-md mx-auto space-y-4">
+                        <button onclick="endGame(0)" class="w-full bg-stone-700 hover:bg-stone-600 text-red-400 font-bold py-5 rounded-xl text-lg transition-all border border-red-900/30 active:scale-95">
+                            💥 PERDU
+                        </button>
+                        
+                        <div class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Ou sélectionnez le gain :</div>
+                        
+                        <div id="multipliers-container" class="grid grid-cols-2 gap-3">
+                            </div>
+                    </div>
+                </div>
+
+            </section>
+
+            <section class="card p-6 rounded-xl space-y-4">
+                <h3 class="font-bold text-gray-400 uppercase text-xs tracking-wider">Distribution des jackpots gagnés</h3>
+                <div id="jackpot-distribution" class="space-y-2 text-sm">
+                    <p class="text-gray-500 italic">Aucune victoire enregistrée</p>
+                </div>
+            </section>
+
+        </main>
+
+        <section class="card p-6 rounded-xl space-y-4">
+            <h3 class="text-lg font-bold text-gray-200">10 Dernières Parties</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm text-gray-300">
+                    <thead class="text-xs uppercase bg-[#121214] text-gray-400">
+                        <tr>
+                            <th class="p-3">Date / Heure</th>
+                            <th class="p-3">Format</th>
+                            <th class="p-3">Durée</th>
+                            <th class="p-3">Résultat</th>
+                            <th class="p-3">Net</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-table-body" class="divide-y divide-[#323238]">
+                        <tr>
+                            <td colspan="5" class="p-4 text-center text-gray-500 italic">Aucune partie enregistrée</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getFirestore, collection, addDoc, updateDoc, doc, query, where, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AizaSyDjH2qPf76Lb-VSW4J6dS_hKEec3i0c68",
+            authDomain: "poker-tracker-3e84d.firebaseapp.com",
+            databaseURL: "https://poker-tracker-3e84d-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "poker-tracker-3e84d",
+            storageBucket: "poker-tracker-3e84d.firebasedatabase.app",
+            messagingSenderId: "220051784036",
+            appId: "1:220051784036:web:9daa7ee37207b914a8fa71"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        const provider = new GoogleAuthProvider();
+        const partiesCollection = collection(db, "parties");
+
+        let currentUser = null;
+        let currentGameId = null;
+        let currentGameBuyIn = 0;
+        let unsubscribeSnapshot = null;
+
+        const multipliers = {
+            0.20: [0.40, 0.60, 0.80, 1.00],
+            1.00: [2.00, 3.00, 4.00, 5.00]
+        };
+
+        // GESTION AUTHENTIFICATION GOOGLE
+        const authContainer = document.getElementById('auth-container');
+        const appContainer = document.getElementById('app-container');
+        const btnGoogleLogin = document.getElementById('btn-google-login');
+        const authError = document.getElementById('auth-error');
+
+        btnGoogleLogin.addEventListener('click', () => {
+            authError.classList.add('hidden');
+            signInWithPopup(auth, provider)
+                .catch(error => {
+                    console.error(error);
+                    authError.innerText = "Erreur de connexion avec Google.";
+                    authError.classList.remove('hidden');
+                });
+        });
+
+        window.logout = function() {
+            if(unsubscribeSnapshot) unsubscribeSnapshot();
+            signOut(auth);
+        };
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('user-display').innerText = `Joueur : ${user.displayName || user.email}`;
+                authContainer.classList.add('hidden');
+                appContainer.classList.remove('hidden');
+                initDataListener(user.uid);
+            } else {
+                currentUser = null;
+                appContainer.classList.add('hidden');
+                authContainer.classList.remove('hidden');
+            }
+        });
+
+        // ACTIONS JEUX
+        const screenStart = document.getElementById('screen-start');
+        const screenEnd = document.getElementById('screen-end');
+        const currentGameInfo = document.getElementById('current-game-info');
+        const multipliersContainer = document.getElementById('multipliers-container');
+
+        window.startGame = async function(buyIn) {
+            if (!currentUser) return;
+            currentGameBuyIn = buyIn;
+
+            try {
+                setupEndScreen(buyIn);
+                const docRef = await addDoc(partiesCollection, {
+                    userId: currentUser.uid,
+                    buyIn: buyIn,
+                    dateDebut: serverTimestamp(),
+                    statut: "En cours",
+                    gain: 0,
+                    net: -buyIn
+                });
+                currentGameId = docRef.id;
+            } catch (e) {
+                console.error(e);
+                resetUI();
+            }
+        };
+
+        window.endGame = async function(gain) {
+            if (!currentGameId) return;
+            const net = gain - currentGameBuyIn;
+            const docRef = doc(db, "parties", currentGameId);
+
+            try {
+                resetUI();
+                await updateDoc(docRef, {
+                    gain: gain,
+                    net: net,
+                    dateFin: serverTimestamp(),
+                    statut: "Terminé"
+                });
+            } catch (e) {
+                console.error(e);
+            }
+        };
+
+        function setupEndScreen(buyIn) {
+            screenStart.classList.add('hidden');
+            screenEnd.classList.remove('hidden');
+            currentGameInfo.innerText = `Format : Spin & Rush ${buyIn.toFixed(2)}€`;
+            
+            multipliersContainer.innerHTML = '';
+            multipliers[buyIn].forEach(amount => {
+                const btn = document.createElement('button');
+                btn.className = "bg-emerald-700 hover:bg-emerald-600 text-white font-bold py-3 px-2 rounded-lg transition-all active:scale-95";
+                btn.innerText = `+ ${amount.toFixed(2)}€`;
+                btn.onclick = () => endGame(amount);
+                multipliersContainer.appendChild(btn);
+            });
+        }
+
+        function resetUI() {
+            currentGameId = null;
+            screenEnd.classList.add('hidden');
+            screenStart.classList.remove('hidden');
+        }
+
+        // CHARGEMENT DATA FILTRÉ PAR USERID
+        function initDataListener(uid) {
+            const q = query(partiesCollection, where("userId", "==", uid), orderBy("dateDebut", "desc"));
+            
+            unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
+                let totalParties = 0, totalMises = 0, totalGains = 0, victoires = 0, netTotal = 0;
+                let jkpDistribution = {};
+                const tableBody = document.getElementById('history-table-body');
+                tableBody.innerHTML = '';
+                let counter = 0;
+
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    
+                    if (data.statut === "Terminé") {
+                        totalParties++;
+                        totalMises += data.buyIn;
+                        totalGains += data.gain;
+                        netTotal += data.net;
+                        if (data.gain > 0) {
+                            victoires++;
+                            jkpDistribution[data.gain] = (jkpDistribution[data.gain] || 0) + 1;
+                        }
+                    }
+
+                    if (counter < 10) {
+                        let dateStr = "En attente...";
+                        let dureeStr = "--";
+                        
+                        if (data.dateDebut) {
+                            const d = data.dateDebut.toDate();
+                            dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                            if (data.dateFin) {
+                                const diffSec = Math.floor((data.dateFin.toDate() - d) / 1000);
+                                dureeStr = `${Math.floor(diffSec / 60)}m ${diffSec % 60}s`;
+                            }
+                        }
+
+                        const badgeResult = data.statut === "En cours" 
+                            ? `<span class="px-2 py-1 text-xs rounded bg-amber-500/20 text-amber-400 font-medium">En cours</span>`
+                            : (data.gain > 0 ? `<span class="px-2 py-1 text-xs rounded bg-emerald-500/20 text-emerald-400 font-medium">Gagné</span>` : `<span class="px-2 py-1 text-xs rounded bg-stone-800 text-stone-400">Perdu</span>`);
+
+                        const netClass = data.net >= 0 ? "text-emerald-400" : "text-red-400";
+
+                        tableBody.innerHTML += `
+                            <tr>
+                                <td class="p-3 text-gray-400">${dateStr}</td>
+                                <td class="p-3 font-medium">${data.buyIn.toFixed(2)}€</td>
+                                <td class="p-3 text-gray-500">${data.statut === "En cours" ? "⏱️" : dureeStr}</td>
+                                <td class="p-3">${badgeResult}</td>
+                                <td class="p-3 font-bold ${netClass}">${data.net >= 0 ? "+" : ""}${data.net.toFixed(2)}€</td>
+                            </tr>
+                        `;
+                        counter++;
+                    }
+                });
+
+                if (totalParties === 0 && counter === 0) {
+                    tableBody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-500 italic">Prêt pour la première partie !</td></tr>`;
+                }
+
+                const roi = totalMises > 0 ? ((netTotal / totalMises) * 100).toFixed(1) : "0.0";
+                const winrate = totalParties > 0 ? ((victoires / totalParties) * 100).toFixed(1) : "0.0";
+
+                document.getElementById('stat-total').innerText = totalParties;
+                const bankrollEl = document.getElementById('stat-bankroll');
+                bankrollEl.innerText = `${netTotal.toFixed(2)}€`;
+                bankrollEl.className = `text-xl font-bold ${netTotal >= 0 ? 'text-emerald-400' : 'text-red-400'}`;
+                
+                const roiEl = document.getElementById('stat-roi');
+                roiEl.innerText = `${roi}%`;
+                roiEl.className = `text-xl font-bold ${roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`;
+                document.getElementById('stat-winrate').innerText = `${winrate}%`;
+
+                const distContainer = document.getElementById('jackpot-distribution');
+                distContainer.innerHTML = '';
+                if (Object.keys(jkpDistribution).length === 0) {
+                    distContainer.innerHTML = `<p class="text-gray-500 italic">Aucune victoire</p>`;
+                } else {
+                    Object.keys(jkpDistribution).sort((a,b) => b-a).forEach(val => {
+                        distContainer.innerHTML += `
+                            <div class="flex justify-between border-b border-[#323238] pb-1">
+                                <span class="text-emerald-400">${parseFloat(val).toFixed(2)}€</span>
+                                <span class="font-bold">${jkpDistribution[val]}x</span>
+                            </div>
+                        `;
+                    });
+                }
+            });
+        }
+    </script>
+</body>
+</html>
