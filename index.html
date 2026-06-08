@@ -102,23 +102,36 @@
 
             </section>
 
-            <section class="card p-6 rounded-xl space-y-4">
-                <h3 class="font-bold text-gray-400 uppercase text-xs tracking-wider">Distribution des jackpots gagnés</h3>
-                <div id="jackpot-distribution" class="space-y-2 text-sm">
-                    <p class="text-gray-500 italic">Aucune victoire enregistrée</p>
+            <section class="flex flex-col gap-6">
+                <div class="card p-6 rounded-xl space-y-4 flex-1">
+                    <h3 class="font-bold text-gray-400 uppercase text-xs tracking-wider">Distribution des jackpots gagnés</h3>
+                    <div id="jackpot-distribution" class="space-y-2 text-sm">
+                        <p class="text-gray-500 italic">Aucune victoire enregistrée</p>
+                    </div>
+                </div>
+
+                <div class="card p-6 rounded-xl space-y-4">
+                    <h3 class="font-bold text-gray-400 uppercase text-xs tracking-wider">Ajuster la Bankroll (Dépôt/Retrait)</h3>
+                    <div class="flex gap-2">
+                        <input type="number" id="bk-amount" step="0.01" placeholder="Ex: 15.00" class="w-full bg-[#121214] border border-[#323238] rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-red-500">
+                        <button onclick="adjustBankroll()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-lg text-sm transition-all active:scale-95">
+                            Valider
+                        </button>
+                    </div>
+                    <p class="text-[11px] text-gray-500">Saisis un montant positif pour un dépôt (ex: 15) ou négatif pour un retrait (ex: -10).</p>
                 </div>
             </section>
 
         </main>
 
         <section class="card p-6 rounded-xl space-y-4">
-            <h3 class="text-lg font-bold text-gray-200">10 Dernières Parties</h3>
+            <h3 class="text-lg font-bold text-gray-200">10 Dernières Activités</h3>
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm text-gray-300">
                     <thead class="text-xs uppercase bg-[#121214] text-gray-400">
                         <tr>
                             <th class="p-3">Date / Heure</th>
-                            <th class="p-3">Format</th>
+                            <th class="p-3">Type / Format</th>
                             <th class="p-3">Durée</th>
                             <th class="p-3">Résultat</th>
                             <th class="p-3">Net</th>
@@ -126,7 +139,7 @@
                     </thead>
                     <tbody id="history-table-body" class="divide-y divide-[#323238]">
                         <tr>
-                            <td colspan="5" class="p-4 text-center text-gray-500 italic">Aucune partie enregistrée</td>
+                            <td colspan="5" class="p-4 text-center text-gray-500 italic">Aucune activité enregistrée</td>
                         </tr>
                     </tbody>
                 </table>
@@ -246,6 +259,33 @@
             }
         };
 
+        // ENREGISTRER UN DEPOT / RETRAIT LIBRE
+        window.adjustBankroll = async function() {
+            if (!currentUser) return;
+            const input = document.getElementById('bk-amount');
+            const amount = parseFloat(input.value);
+
+            if (isNaN(amount) || amount === 0) {
+                alert("Veuillez saisir un montant valide (différent de 0).");
+                return;
+            }
+
+            try {
+                await addDoc(partiesCollection, {
+                    userId: currentUser.uid,
+                    buyIn: 0,
+                    gain: amount,
+                    net: amount,
+                    dateDebut: serverTimestamp(),
+                    dateFin: serverTimestamp(),
+                    statut: "Transaction"
+                });
+                input.value = ''; // Reset du champ libre
+            } catch (e) {
+                console.error("Erreur transaction: ", e);
+            }
+        };
+
         function setupEndScreen(buyIn) {
             screenStart.classList.add('hidden');
             screenEnd.classList.remove('hidden');
@@ -281,17 +321,23 @@
                 snapshot.forEach((doc) => {
                     const data = doc.data();
                     
+                    // Calcul global de la Bankroll (Prend tout : parties terminées ET transactions libres)
+                    if (data.statut === "Terminé" || data.statut === "Transaction") {
+                        netTotal += data.net;
+                    }
+
+                    // Statistiques de Poker pures (Ignore les dépôts/retraits)
                     if (data.statut === "Terminé") {
                         totalParties++;
                         totalMises += data.buyIn;
                         totalGains += data.gain;
-                        netTotal += data.net;
                         if (data.gain > 0) {
                             victoires++;
                             jkpDistribution[data.gain] = (jkpDistribution[data.gain] || 0) + 1;
                         }
                     }
 
+                    // Remplissage du tableau d'historique (max 10 lignes)
                     if (counter < 10) {
                         let dateStr = "En attente...";
                         let dureeStr = "--";
@@ -299,22 +345,33 @@
                         if (data.dateDebut) {
                             const d = data.dateDebut.toDate();
                             dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                            if (data.dateFin) {
+                            if (data.dateFin && data.statut === "Terminé") {
                                 const diffSec = Math.floor((data.dateFin.toDate() - d) / 1000);
                                 dureeStr = `${Math.floor(diffSec / 60)}m ${diffSec % 60}s`;
                             }
                         }
 
-                        const badgeResult = data.statut === "En cours" 
-                            ? `<span class="px-2 py-1 text-xs rounded bg-amber-500/20 text-amber-400 font-medium">En cours</span>`
-                            : (data.gain > 0 ? `<span class="px-2 py-1 text-xs rounded bg-emerald-500/20 text-emerald-400 font-medium">Gagné</span>` : `<span class="px-2 py-1 text-xs rounded bg-stone-800 text-stone-400">Perdu</span>`);
+                        let formatDisplay = `${data.buyIn.toFixed(2)}€`;
+                        let badgeResult = "";
+
+                        if (data.statut === "En cours") {
+                            badgeResult = `<span class="px-2 py-1 text-xs rounded bg-amber-500/20 text-amber-400 font-medium">En cours</span>`;
+                        } else if (data.statut === "Transaction") {
+                            formatDisplay = data.net >= 0 ? "💰 Dépôt" : "💸 Retrait";
+                            badgeResult = `<span class="px-2 py-1 text-xs rounded bg-blue-500/20 text-blue-400 font-medium">Ajustement</span>`;
+                            dureeStr = "Fait";
+                        } else {
+                            badgeResult = data.gain > 0 
+                                ? `<span class="px-2 py-1 text-xs rounded bg-emerald-500/20 text-emerald-400 font-medium">Gagné</span>` 
+                                : `<span class="px-2 py-1 text-xs rounded bg-stone-800 text-stone-400">Perdu</span>`;
+                        }
 
                         const netClass = data.net >= 0 ? "text-emerald-400" : "text-red-400";
 
                         tableBody.innerHTML += `
                             <tr>
                                 <td class="p-3 text-gray-400">${dateStr}</td>
-                                <td class="p-3 font-medium">${data.buyIn.toFixed(2)}€</td>
+                                <td class="p-3 font-medium">${formatDisplay}</td>
                                 <td class="p-3 text-gray-500">${data.statut === "En cours" ? "⏱️" : dureeStr}</td>
                                 <td class="p-3">${badgeResult}</td>
                                 <td class="p-3 font-bold ${netClass}">${data.net >= 0 ? "+" : ""}${data.net.toFixed(2)}€</td>
@@ -328,7 +385,8 @@
                     tableBody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-500 italic">Prêt pour la première partie !</td></tr>`;
                 }
 
-                const roi = totalMises > 0 ? ((netTotal / totalMises) * 100).toFixed(1) : "0.0";
+                // ROI & Winrate calculés uniquement sur les vraies sessions de jeu
+                const roi = totalMises > 0 ? (((totalGains - totalMises) / totalMises) * 100).toFixed(1) : "0.0";
                 const winrate = totalParties > 0 ? ((victoires / totalParties) * 100).toFixed(1) : "0.0";
 
                 document.getElementById('stat-total').innerText = totalParties;
