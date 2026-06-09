@@ -181,15 +181,16 @@
         import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, query, where, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
+        // CONFIGURATION CORRIGÉE ET MISE À JOUR AVEC TES EXACTS CREDENTIALS
         const firebaseConfig = {
-  apiKey: "AIzaSyDjH2qP9f76Lb-VSW4J6dS_hKEec3i0c68",
-  authDomain: "poker-tracker-3e84d.firebaseapp.com",
-  databaseURL: "https://poker-tracker-3e84d-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "poker-tracker-3e84d",
-  storageBucket: "poker-tracker-3e84d.firebasestorage.app",
-  messagingSenderId: "220051784036",
-  appId: "1:220051784036:web:9daa7ee37207b914a8fa71"
-};
+            apiKey: "AIzaSyDjH2qP9f76Lb-VSW4J6dS_hKEec3i0c68",
+            authDomain: "poker-tracker-3e84d.firebaseapp.com",
+            databaseURL: "https://poker-tracker-3e84d-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "poker-tracker-3e84d",
+            storageBucket: "poker-tracker-3e84d.firebasestorage.app",
+            messagingSenderId: "220051784036",
+            appId: "1:220051784036:web:9daa7ee37207b914a8fa71"
+        };
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
@@ -200,9 +201,9 @@
         let currentUser = null, currentGameId = null, currentGameBuyIn = 0, unsubscribeSnapshot = null;
         let chartInstance = null, currentTimeFilter = 'all', allDataCache = [];
 
-        // STRUCTURE DES MULTIPLICATEURS MIS À JOUR SELON TES PROBAS BETCLIC
+        // TOUTES LES POSSIBILITÉS DE GAINS (0.80€ AJOUTÉ POUR LES 0.20€)
         const multipliers = { 
-            0.20: [0.40, 0.60, 1.00, 2.00, 10.00, 200.00],
+            0.20: [0.40, 0.60, 0.80, 1.00, 2.00, 10.00, 200.00],
             1.00: [2.00, 3.00, 5.00, 10.00, 50.00, 1000.00],
             2.00: [4.00, 6.00, 10.00, 20.00, 100.00, 2000.00],
             5.00: [10.00, 15.00, 25.00, 50.00, 250.00, 5000.00],
@@ -288,8 +289,8 @@
             document.getElementById('current-game-info').innerText = `Format : Spin & Rush ${buyIn.toFixed(2)}€`;
             multipliersContainer.innerHTML = '';
             
-            // On affiche seulement les 4 plus petits multiplicateurs courants pour garder des gros boutons propres sur mobile
-            // Les jackpots astronomiques (ex: x1000) restent pris en compte s'ils tombent
+            // Affiche les multiplicateurs réguliers les plus fréquents pour la grille (les 4 premiers)
+            // Pour le format 0,20€, cela affichera : 0.40€, 0.60€, 0.80€ et 1.00€ !
             const availableAmounts = multipliers[buyIn].slice(0, 4); 
             
             availableAmounts.forEach(amount => {
@@ -330,7 +331,6 @@
 
             let totalParties = 0, totalMises = 0, totalGains = 0, victoires = 0, netPeriod = 0;
             let formatStats = {};
-            // Initialisation dynamique des formats supportés
             Object.keys(multipliers).forEach(k => { formatStats[k] = { volume: 0, wins: 0, net: 0 }; });
             let jkpDistribution = {};
 
@@ -439,7 +439,7 @@
             roiEl.className = `text-2xl font-bold mt-1 ${roi >= 0 ? 'text-emerald-400' : 'text-red-400'}`;
             document.getElementById('stat-winrate').innerText = `${winrate}%`;
 
-            // RENTABILITÉ PAR FORMATS (FILTRÉ UNIQUEMENT SUR LES JOUÉS)
+            // RENTABILITÉ PAR FORMATS
             const formatContainer = document.getElementById('format-stats-container');
             formatContainer.innerHTML = '';
             let activeFormats = 0;
