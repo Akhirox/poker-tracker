@@ -181,7 +181,6 @@
         import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, query, where, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-        // CONFIGURATION CORRIGÉE ET MISE À JOUR AVEC TES EXACTS CREDENTIALS
         const firebaseConfig = {
             apiKey: "AIzaSyDjH2qP9f76Lb-VSW4J6dS_hKEec3i0c68",
             authDomain: "poker-tracker-3e84d.firebaseapp.com",
@@ -201,7 +200,6 @@
         let currentUser = null, currentGameId = null, currentGameBuyIn = 0, unsubscribeSnapshot = null;
         let chartInstance = null, currentTimeFilter = 'all', allDataCache = [];
 
-        // TOUTES LES POSSIBILITÉS DE GAINS (0.80€ AJOUTÉ POUR LES 0.20€)
         const multipliers = { 
             0.20: [0.40, 0.60, 0.80, 1.00, 2.00, 10.00, 200.00],
             1.00: [2.00, 3.00, 5.00, 10.00, 50.00, 1000.00],
@@ -289,9 +287,8 @@
             document.getElementById('current-game-info').innerText = `Format : Spin & Rush ${buyIn.toFixed(2)}€`;
             multipliersContainer.innerHTML = '';
             
-            // Affiche les multiplicateurs réguliers les plus fréquents pour la grille (les 4 premiers)
-            // Pour le format 0,20€, cela affichera : 0.40€, 0.60€, 0.80€ et 1.00€ !
-            const availableAmounts = multipliers[buyIn].slice(0, 4); 
+            // CORRIGÉ : On prend les 5 premiers montants pour inclure le 2,00€ (x10) de la limite 0,20€
+            const availableAmounts = multipliers[buyIn].slice(0, 5); 
             
             availableAmounts.forEach(amount => {
                 const btn = document.createElement('button');
