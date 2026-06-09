@@ -181,6 +181,7 @@
         import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, query, where, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
+        // CONFIGURATION OFFICIELLE AVEC TES CREDENTIALS ENREGISTRÉS
         const firebaseConfig = {
             apiKey: "AIzaSyDjH2qP9f76Lb-VSW4J6dS_hKEec3i0c68",
             authDomain: "poker-tracker-3e84d.firebaseapp.com",
@@ -200,12 +201,13 @@
         let currentUser = null, currentGameId = null, currentGameBuyIn = 0, unsubscribeSnapshot = null;
         let chartInstance = null, currentTimeFilter = 'all', allDataCache = [];
 
+        // TOUTES LES POSSIBILITÉS DE GAINS BETCLIC
         const multipliers = { 
             0.20: [0.40, 0.60, 0.80, 1.00, 2.00, 10.00, 200.00],
-            1.00: [2.00, 3.00, 5.00, 10.00, 50.00, 1000.00],
-            2.00: [4.00, 6.00, 10.00, 20.00, 100.00, 2000.00],
-            5.00: [10.00, 15.00, 25.00, 50.00, 250.00, 5000.00],
-            10.00: [20.00, 30.00, 50.00, 100.00, 500.00, 10000.00]
+            1.00: [2.00, 3.00, 4.00, 5.00, 10.00, 50.00, 1000.00],
+            2.00: [4.00, 6.00, 8.00, 10.00, 20.00, 100.00, 2000.00],
+            5.00: [10.00, 15.00, 20.00, 25.00, 50.00, 250.00, 5000.00],
+            10.00: [20.00, 30.00, 40.00, 50.00, 100.00, 500.00, 10000.00]
         };
 
         // AUTH
@@ -287,8 +289,8 @@
             document.getElementById('current-game-info').innerText = `Format : Spin & Rush ${buyIn.toFixed(2)}€`;
             multipliersContainer.innerHTML = '';
             
-            // CORRIGÉ : On prend les 5 premiers montants pour inclure le 2,00€ (x10) de la limite 0,20€
-            const availableAmounts = multipliers[buyIn].slice(0, 5); 
+            // CORRIGÉ : On prend les 6 premiers montants pour s'assurer d'inclure le 4,00€ pour la limite 1€ (et le x10)
+            const availableAmounts = multipliers[buyIn].slice(0, 6); 
             
             availableAmounts.forEach(amount => {
                 const btn = document.createElement('button');
